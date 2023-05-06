@@ -1,5 +1,5 @@
-import App from './app';
-import config from './utils/config';
+import App from 'app';
+import config from 'utils/config';
 
 async function main() {
   const app = await App();

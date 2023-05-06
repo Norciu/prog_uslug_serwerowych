@@ -1,8 +1,8 @@
 import fastify from 'fastify';
 import type { FastifyZod } from 'fastify-zod';
 import { buildJsonSchemas, register } from 'fastify-zod';
-import validator from './validator';
-import Router from './components/router';
+import validator from 'validator';
+import Router from 'components/router';
 
 declare module 'fastify' {
   //@ts-ignore

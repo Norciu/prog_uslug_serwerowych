@@ -18,4 +18,4 @@ COPY --from=builder /app/dist ./dist
 
 RUN npm install --only=production
 
-CMD ["node", "dist/index.js"]
+CMD ["node","dist/index.js"]

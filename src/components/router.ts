@@ -1,32 +1,24 @@
 import { StatusCodes, ReasonPhrases } from 'http-status-codes';
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { sql } from 'kysely';
-import RabbitMq from '../utils/rabitmq';
-import db from '../utils/db';
-import redis from '../utils/redis';
-import testConnection from '../utils/mongo';
+import { FastifyInstance } from 'fastify';
+import check from 'utils/status-checker';
 
-export default async function Router(fastify: FastifyInstance, options: FastifyPluginOptions) {
+export default async function Router(fastify: FastifyInstance) {
   fastify.get('/health', async (request, response) => {
-    try {
-      // Test postgres connection
-      await sql`SELECT 1`.execute(db);
+    const [postgres, redis, mongo, rabbitmq] = await Promise.all([
+      check.postgres(),
+      check.redis(),
+      check.mongo(),
+      check.rabbitmq(),
+    ]);
 
-      //Test redis connection
-      await redis.set('health', 'ok');
-      await redis.del('health');
+    const status = {
+      postgres, redis, mongo, rabbitmq,
+    };
 
-      // Test mongodb connection
-      await testConnection();
-
-      //Test rabbitmq connection
-      await RabbitMq();
-    } catch (e) {
-      console.log(e);
-      return response.status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .send(e);
+    if (Object.values(status).some((value) => value === ReasonPhrases.INTERNAL_SERVER_ERROR)) {
+      return response.status(StatusCodes.INTERNAL_SERVER_ERROR).send(status);
     }
 
-    return response.status(StatusCodes.OK).send(ReasonPhrases.OK);
+    return response.status(StatusCodes.OK).send(status);
   });
 }
