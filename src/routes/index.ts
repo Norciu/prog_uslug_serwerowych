@@ -1,4 +1,4 @@
-import { StatusCodes, ReasonPhrases } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import { FastifyInstance } from 'fastify';
 import check from 'utils/status-checker';
 
@@ -15,10 +15,13 @@ export default async function Router(fastify: FastifyInstance) {
       postgres, redis, mongo, rabbitmq,
     };
 
-    if (Object.values(status).some((value) => value === ReasonPhrases.INTERNAL_SERVER_ERROR)) {
+    if (Object.values(status).some((value) => value === 'error')) {
       return response.status(StatusCodes.INTERNAL_SERVER_ERROR).send(status);
     }
 
     return response.status(StatusCodes.OK).send(status);
   });
+
+  // Register routes
+  fastify.register(import('./auth'), { prefix: '/auth' });
 }

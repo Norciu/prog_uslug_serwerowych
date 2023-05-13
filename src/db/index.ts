@@ -1,12 +1,8 @@
-//@ts-ignore
+// @ts-ignore
 import { Pool } from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
-import config from './config';
-
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface Database {
-
-}
+import config from '../utils/config';
+import { Database } from './db.type';
 
 export default new Kysely<Database>({
   dialect: new PostgresDialect({

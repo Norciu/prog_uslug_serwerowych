@@ -1,8 +1,7 @@
 import RabbitMq from 'utils/rabitmq';
-import db from 'utils/db';
+import db from 'db';
 import redis from 'utils/redis';
 import testConnection from 'utils/mongo';
-import { ReasonPhrases } from 'http-status-codes';
 import { sql } from 'kysely';
 
 function StatusChecker() {
@@ -10,34 +9,28 @@ function StatusChecker() {
     async postgres() {
       try {
         await sql`SELECT 1`.execute(db);
-        return ReasonPhrases.OK;
+        return 'ok';
       } catch (e) {
-        return ReasonPhrases.INTERNAL_SERVER_ERROR;
+        return 'error';
       }
     },
     async redis() {
-      try {
-        await redis.set('health', 'ok');
-        await redis.del('health');
-        return ReasonPhrases.OK;
-      } catch (e) {
-        return ReasonPhrases.INTERNAL_SERVER_ERROR;
-      }
+      return redis.status() === 'ready' ? 'ok' : 'error';
     },
     async mongo() {
       try {
         await testConnection();
-        return ReasonPhrases.OK;
+        return 'ok';
       } catch (e) {
-        return ReasonPhrases.INTERNAL_SERVER_ERROR;
+        return 'error';
       }
     },
     async rabbitmq() {
       try {
         await RabbitMq();
-        return ReasonPhrases.OK;
+        return 'ok';
       } catch (e) {
-        return ReasonPhrases.INTERNAL_SERVER_ERROR;
+        return 'error';
       }
     },
   };

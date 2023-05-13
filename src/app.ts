@@ -1,22 +1,12 @@
 import fastify from 'fastify';
-import type { FastifyZod } from 'fastify-zod';
-import { buildJsonSchemas, register } from 'fastify-zod';
-import validator from 'validator';
-import Router from 'components/router';
+import Router from 'routes';
+import { JsonSchemaToTsProvider } from '@fastify/type-provider-json-schema-to-ts';
 
-declare module 'fastify' {
-  //@ts-ignore
-  interface FastifyInstance {
-    readonly zod: FastifyZod<typeof validator>;
-  }
-}
+const app = fastify({ logger: true }).withTypeProvider<JsonSchemaToTsProvider>();
+export type AppInstance = typeof app;
 
 export default async function App() {
-  const app = await register(
-    fastify({ logger: true }),
-    { jsonSchemas: buildJsonSchemas(validator) },
-  );
-  await app.register(Router);
+  await app.register(Router, { prefix: '/api' });
 
   return app;
 }
