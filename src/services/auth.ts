@@ -3,7 +3,8 @@ import redis from 'utils/redis';
 import { generatePin } from 'utils';
 import validator from 'validator';
 import Email from 'utils/email';
-import accountUserRepo from 'db/models/account-user';
+import accountUserRepo, { AccountUserJWT } from 'db/models/account-user';
+import { signJWT, verifyJWT } from 'middleware/jwt';
 
 type UserRegister = FromSchema<typeof validator.auth.register.body>;
 
@@ -17,18 +18,31 @@ function AuthService() {
         throw new Error('Email already exists');
       }
       const pin = generatePin();
-      await register_cache.set(`${user.email}:${pin}`, user, 600); // 10 minutes
+      await Promise.all([
+        accountUserRepo.create(user),
+        register_cache.set(pin, user.email, 600), // 10 minutes
+      ]);
       return pin;
     },
-    async validateRegisterCache(email: string, pin: string) {
-      const cache = await register_cache.get<UserRegister>(`${email}:${pin}`);
-      if (!cache) {
-        return false;
+    async validateRegisterCache(pin: string) {
+      const email = await register_cache.get<string>(pin);
+      if (!email) {
+        throw new Error('Invalid pin');
       }
-      await register_cache.del(`${email}:${pin}`);
-      await accountUserRepo.create(cache);
-
-      return true;
+      await Promise.all([
+        accountUserRepo.activate(email),
+        register_cache.del(pin),
+      ]);
+    },
+    async login(email: string, password: string) {
+      const user = await accountUserRepo.loginByEmail(email, password);
+      return signJWT(user);
+    },
+    async refreshToken(refresh_token: string) {
+      const {
+        iss, sub, aud, exp, nbf, iat, jti, ...user
+      } = (await verifyJWT(refresh_token)).payload;
+      return signJWT(user as AccountUserJWT);
     },
   };
 }

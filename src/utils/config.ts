@@ -16,6 +16,7 @@ function getEnv(name: string, opts?: GetEnvOpts) {
 export default {
   api_port: Number(getEnv('API_PORT', { default: '8000' })),
   sql_debug: getEnv('SQL_DEBUG', { default: 'true' }) === 'true',
+  jwt_secret: getEnv('JWT_SECRET', { default: 'qwerty' }),
   postgres: {
     host: getEnv('POSTGRES_HOST', { default: 'localhost' }),
     port: getEnv('POSTGRES_PORT', { default: '5432' }),

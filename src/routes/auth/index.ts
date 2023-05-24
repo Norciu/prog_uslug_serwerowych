@@ -1,50 +1,132 @@
-import { AppInstance } from 'app';
 import validator from 'validator';
 import authService from 'services/auth';
-import { ReasonPhrases, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
+import { FastifyPluginAsyncJsonSchemaToTs } from '@fastify/type-provider-json-schema-to-ts';
+import { Transform } from 'utils';
 
 // Prefix /api/auth
-async function AuthRouter(fastify: AppInstance) {
+const AuthRouter: FastifyPluginAsyncJsonSchemaToTs = async (fastify) => {
   fastify.route({
     method: 'POST',
     url: '/registration',
-    schema: validator.auth.register,
+    schema: {
+      body: validator.auth.register.body,
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+          },
+        },
+        400: {
+          type: 'string',
+          value: 'Nie można utworzyć użytkownika',
+        },
+      },
+    },
     handler: async (req, res) => {
       try {
-        const pin = await authService.registerCache(req.body);
-        return await res.code(StatusCodes.OK).send({ pin });
+        const code = await authService.registerCache(req.body);
+        return await res.code(StatusCodes.CREATED).send({ code });
       } catch (e) {
-        if (e instanceof Error && e.message === 'Email already exists') {
-          return res.code(StatusCodes.CONFLICT).send(ReasonPhrases.CONFLICT);
-        }
-        return res.code(StatusCodes.INTERNAL_SERVER_ERROR)
-          .send(ReasonPhrases.INTERNAL_SERVER_ERROR);
+        return res.code(StatusCodes.BAD_REQUEST).send('Nie można utworzyć użytkownika');
       }
     },
   });
 
   fastify.route({
-    method: 'GET',
+    method: 'POST',
     url: '/registration/confirm',
     schema: {
-      querystring: {
+      body: {
         type: 'object',
         properties: {
-          email: { type: 'string' },
-          pin: { type: 'string' },
+          code: { type: 'string' },
         },
-        required: ['email', 'pin'],
+        required: ['code'],
+      },
+      response: {
+        200: {
+          type: 'string',
+          value: 'Aktywowano użytkownika',
+        },
+        404: {
+          type: 'string',
+          value: 'Kod nie istnieje lub wygasł',
+        },
       },
     } as const,
     handler: async (req, res) => {
-      const t = await authService.validateRegisterCache(req.query.email, req.query.pin);
-      if (!t) {
-        return res.code(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+      try {
+        await authService.validateRegisterCache(req.body.code);
+        return await res.code(StatusCodes.OK).send('Aktywowano użytkownika');
+      } catch (e) {
+        return res.code(StatusCodes.NOT_FOUND).send('Kod nie istnieje lub wygasł');
       }
-
-      return res.code(StatusCodes.CREATED).send(ReasonPhrases.CREATED);
     },
   });
-}
+
+  fastify.route({
+    method: 'POST',
+    url: '/login',
+    schema: {
+      body: validator.auth.login.body,
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+          },
+        },
+        401: {
+          type: 'string',
+          value: 'Błędne dane uwierzytelniające',
+        },
+      },
+    },
+    handler: async (req, res) => {
+      try {
+        const {
+          token: accessToken,
+          refresh_token: refreshToken,
+        } = await authService.login(req.body.email, req.body.password);
+        return await res.code(StatusCodes.OK).send({ accessToken, refreshToken });
+      } catch (e) {
+        return res.code(StatusCodes.UNAUTHORIZED).send('Błędne dane uwierzytelniające');
+      }
+    },
+  });
+
+  fastify.route({
+    method: 'POST',
+    url: '/refresh',
+    schema: {
+      body: validator.auth.refresh_token.body,
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+          },
+        },
+        401: {
+          type: 'string',
+          value: 'Błędny lub przedawniony token',
+        },
+      },
+    },
+    async handler(req, res) {
+      try {
+        const { refresh_token: old_refresh_token } = req.body;
+        const { token: accessToken, refresh_token: refreshToken } = await authService.refreshToken(old_refresh_token);
+        return await res.code(StatusCodes.OK).send({ accessToken, refreshToken });
+      } catch (e) {
+        return res.code(StatusCodes.UNAUTHORIZED).send('Błędny lub przedawniony token');
+      }
+    },
+  });
+};
 
 export default AuthRouter;

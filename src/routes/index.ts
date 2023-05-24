@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
-import { FastifyInstance } from 'fastify';
 import check from 'utils/status-checker';
+import { FastifyPluginAsyncJsonSchemaToTs } from '@fastify/type-provider-json-schema-to-ts';
 
-export default async function Router(fastify: FastifyInstance) {
+const Router: FastifyPluginAsyncJsonSchemaToTs = async (fastify) => {
   fastify.get('/health', async (request, response) => {
     const [postgres, redis, mongo, rabbitmq] = await Promise.all([
       check.postgres(),
@@ -24,4 +24,6 @@ export default async function Router(fastify: FastifyInstance) {
 
   // Register routes
   fastify.register(import('./auth'), { prefix: '/auth' });
-}
+};
+
+export default Router;

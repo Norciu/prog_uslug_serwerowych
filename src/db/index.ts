@@ -1,4 +1,3 @@
-// @ts-ignore
 import { Pool } from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import config from '../utils/config';
@@ -14,4 +13,9 @@ export default new Kysely<Database>({
       port: Number(config.postgres.port),
     }),
   }),
+  log(event) {
+    if (event.level === 'query') {
+      console.log(event.query.sql);
+    }
+  },
 });

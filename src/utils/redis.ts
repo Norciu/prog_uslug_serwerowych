@@ -1,8 +1,6 @@
 import IORedis from 'ioredis';
 import config from './config';
 
-type RedisValue = Record<string | number | symbol, unknown> | string | number | Buffer;
-
 export function Redis(uri = config.redis_url) {
   const redis = new IORedis(uri);
 
@@ -10,12 +8,17 @@ export function Redis(uri = config.redis_url) {
     getCache(prefix?: string) {
       const k = (key: string) => (prefix ? `${prefix}:${key}` : key);
       return {
-        async set(key: string, value: RedisValue, expire?: number) {
-          const val = typeof value === 'object' ? JSON.stringify(value) : value;
+        async set(key: string, value: string | number | Buffer, expire?: number) {
           if (expire) {
-            return redis.set(k(key), val, 'EX', expire);
+            return redis.set(k(key), value, 'EX', expire);
           }
-          return redis.set(k(key), val);
+          return redis.set(k(key), value);
+        },
+        async hset(key: string, vals: Record<string, unknown>) {
+          return redis.hset(k(key), vals);
+        },
+        async hget(key: string) {
+          return redis.hgetall(k(key));
         },
         async get<T>(key: string) {
           const val = await redis.get(k(key));

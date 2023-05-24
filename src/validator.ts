@@ -26,19 +26,28 @@ const validator = {
         required: ['email', 'password', 'first_name', 'last_name', 'country', 'city', 'street', 'zip_code'],
         additionalProperties: false,
       },
-    } as const,
-    register_confirm: {
-      querystring: {
+    },
+    login: {
+      body: {
         type: 'object',
         properties: {
           email: { type: 'string' },
-          pin: { type: 'string' },
+          password: { type: 'string' },
         },
-        required: ['email', 'pin'],
+        required: ['email', 'password'],
         additionalProperties: false,
       },
-    } as const,
+    },
+    refresh_token: {
+      body: {
+        type: 'object',
+        properties: {
+          refresh_token: { type: 'string' },
+        },
+        required: ['refresh_token'],
+      },
+    },
   },
-};
+} as const;
 
 export default validator;
