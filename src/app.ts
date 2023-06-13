@@ -1,19 +1,26 @@
 import fastify from 'fastify';
+import { writeFileSync } from 'fs';
 import Router from 'routes';
+import handleSession from 'middleware/jwt';
+import { AccountUserJWT } from 'db/models/account-user';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    authenticate: () => void;
+    handleSession: () => Promise<void>;
   }
   interface FastifyRequest {
-    user: any;
+    session: AccountUserJWT;
+  }
+
+  interface FastifySchema {
+    auth: boolean;
   }
 }
 
 export default async function App() {
   const app = fastify({ logger: true });
 
-  await app.register(import('./middleware/jwt'));
+  await app.register(handleSession);
 
   await app.register(import('@fastify/swagger'), {
     swagger: {
@@ -31,6 +38,9 @@ export default async function App() {
   });
 
   await app.register(Router);
+
+  const swagger = app.swagger();
+  writeFileSync('./swagger.json', JSON.stringify(swagger, null, 2));
 
   return app;
 }

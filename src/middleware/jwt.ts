@@ -1,5 +1,5 @@
 import { AccountUserJWT } from 'db/models/account-user';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { ReasonPhrases, StatusCodes } from 'http-status-codes';
 import * as jose from 'jose';
@@ -12,12 +12,10 @@ export async function verifyJWT(jwt_token: string) {
 }
 
 export async function signJWT(payload: AccountUserJWT) {
-  const token_instance = new jose.SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt();
+  const token_instance = new jose.SignJWT(payload).setProtectedHeader({ alg: 'HS256' }).setIssuedAt();
 
   const [token, refresh_token] = await Promise.all([
-    token_instance.setExpirationTime('5m').sign(secret),
+    token_instance.setExpirationTime('10h').sign(secret),
     token_instance.setExpirationTime('1h').sign(secret),
   ]);
 
@@ -29,8 +27,13 @@ export async function signJWT(payload: AccountUserJWT) {
   };
 }
 
-export default fp(async (fastify) => {
-  fastify.decorate('authenticate', async (req: FastifyRequest, res: FastifyReply) => {
+export const handleSession: FastifyPluginAsync = fp(async (fastify) => {
+  fastify.decorateRequest('session', null);
+
+  fastify.addHook('onRequest', async (req: FastifyRequest, res: FastifyReply) => {
+    if (!req.routeSchema?.auth) {
+      return;
+    }
     const { authorization } = req.headers;
     if (!authorization) {
       return res.status(StatusCodes.UNAUTHORIZED).send(ReasonPhrases.UNAUTHORIZED);
@@ -42,9 +45,11 @@ export default fp(async (fastify) => {
 
     try {
       const user = await verifyJWT(token);
-      req.user = user.payload;
+      req.session = user.payload as AccountUserJWT;
     } catch (e) {
-      return res.status(401).send('Unauthorized');
+      return res.status(StatusCodes.UNAUTHORIZED).send(ReasonPhrases.UNAUTHORIZED);
     }
   });
 });
+
+export default handleSession;

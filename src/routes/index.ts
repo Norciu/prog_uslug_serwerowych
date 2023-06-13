@@ -12,7 +12,10 @@ const Router: FastifyPluginAsyncJsonSchemaToTs = async (fastify) => {
     ]);
 
     const status = {
-      postgres, redis, mongo, rabbitmq,
+      postgres,
+      redis,
+      mongo,
+      rabbitmq,
     };
 
     if (Object.values(status).some((value) => value === 'error')) {
@@ -24,6 +27,14 @@ const Router: FastifyPluginAsyncJsonSchemaToTs = async (fastify) => {
 
   // Register routes
   fastify.register(import('./auth'), { prefix: '/auth' });
+
+  fastify.register(import('./project'), { prefix: '/project' });
+
+  fastify.register(import('./project/task'), { prefix: '/project' });
+
+  fastify.register(import('./project/user'), { prefix: '/project' });
+
+  fastify.register(import('./project/comment'), { prefix: '/project' });
 };
 
 export default Router;

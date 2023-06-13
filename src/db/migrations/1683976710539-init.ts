@@ -5,9 +5,11 @@ import { Chance } from 'chance';
 const chance = new Chance();
 
 export async function up(db: Kysely<Database>): Promise<void> {
-  await sql`CREATE EXTENSION pgcrypto`.execute(db);
-  await db.schema.createSchema('account').execute();
-  await db.schema.withSchema('account').createTable('user')
+  await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`.execute(db);
+  await db.schema.createSchema('account').ifNotExists().execute();
+  await db.schema
+    .withSchema('account')
+    .createTable('user')
     .addColumn('id', 'serial', (col) => col.primaryKey())
     .addColumn('email', 'varchar(255)', (col) => col.unique().notNull())
     .addColumn('password', 'varchar(255)', (col) => col.notNull())
@@ -22,17 +24,20 @@ export async function up(db: Kysely<Database>): Promise<void> {
     .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`now()`))
     .execute();
 
-  await db.insertInto('account.user').values({
-    email: 'test@edu.wsti.pl',
-    password: sql`crypt('Zaq12wsx#', gen_salt('bf'))`,
-    first_name: chance.first(),
-    last_name: chance.last(),
-    country: chance.country(),
-    city: chance.city(),
-    street: chance.street(),
-    zip_code: chance.zip(),
-    active: true,
-  }).execute();
+  await db
+    .insertInto('account.user')
+    .values({
+      email: 'test@edu.wsti.pl',
+      password: sql`crypt('Zaq12wsx#', gen_salt('bf'))`,
+      first_name: chance.first(),
+      last_name: chance.last(),
+      country: chance.country(),
+      city: chance.city(),
+      street: chance.street(),
+      zip_code: chance.zip(),
+      active: true,
+    })
+    .execute();
 }
 
 export async function down(db: Kysely<Database>): Promise<void> {

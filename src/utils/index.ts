@@ -1,10 +1,10 @@
 import _ from 'lodash';
 
-export function generatePin(): string {
-  const min = 1; // Minimum value for a 6-digit pin
-  const max = 999999; // Maximum value for a 6-digit pin
+export function generatePin(length = 6): string {
+  const min = 1;
+  const max = Number('9'.padStart(length, '9'));
   const pin = Math.floor(Math.random() * (max - min + 1)) + min;
-  return pin.toString().padStart(6, '0'); // Pads the pin with leading zeros if necessary
+  return pin.toString().padStart(length, '0');
 }
 
 export function Transform(obj: Record<string, unknown>) {
